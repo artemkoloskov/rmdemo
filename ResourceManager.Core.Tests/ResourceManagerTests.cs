@@ -1,6 +1,6 @@
 namespace ResourceManager.Core.Tests;
 
-public class UnitTest1
+public class ResourceManagerTests
 {
     [Fact]
     public void Test1()

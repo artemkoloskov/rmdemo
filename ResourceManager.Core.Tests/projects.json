@@ -1,0 +1,6 @@
+{
+    "Projects": [
+        { "MemoryCount": 100, "AppTimeout": 100, "TryCount": 100, "MaxThreads": 10 },
+        { "MemoryCount": 200, "AppTimeout": 200, "TryCount": 100, "MaxThreads": 10 }
+    ]
+}
