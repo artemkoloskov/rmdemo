@@ -19,18 +19,30 @@ public class ResourceManagerTests
         // Arrange
         var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
         var maxGlobalThreads = 0;
-        var jsonFilePath = Path.Combine(Directory.GetCurrentDirectory(), "projects.json");
 
         // Act & Assert
         Assert.ThrowsAny<ArgumentOutOfRangeException>(() => new ResourceManager(appPath, maxGlobalThreads));
     }
 
     [Fact]
-    public void ExecuteProjectsAsync_ValidJsonFilePath_ExecutesProjects()
+    public void ExecuteProjects_WhenJsonFilePathIsInvalid_ThrowsArgumentException()
     {
         // Arrange
         var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
-        var jsonFilePath = Path.Combine(Directory.GetCurrentDirectory(), "projects.json");
+        string? jsonFilePath = null;
+        var maxGlobalThreads = 10;
+        var resourceManager = new ResourceManager(appPath, maxGlobalThreads);
+
+        // Act & Assert
+        Assert.ThrowsAny<ArgumentException>(() => resourceManager.ExecuteProjects(jsonFilePath));
+    }
+
+    [Fact]
+    public void ExecuteProjects_ValidJsonFilePath_ExecutesProjects()
+    {
+        // Arrange
+        var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
+        var jsonFilePath = "projects.json";
         var maxGlobalThreads = 10;
         var resourceManager = new ResourceManager(appPath, maxGlobalThreads);
 
