@@ -26,4 +26,10 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+		<None Update="projects.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+  </ItemGroup>
+
 </Project>
