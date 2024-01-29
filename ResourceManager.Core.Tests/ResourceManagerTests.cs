@@ -84,17 +84,17 @@ public class ResourceManagerTests
     }
 
     [Fact]
-    public void ExecuteProjects_ValidJsonFilePath_ExecutesProjects()
+    public async Task ExecuteProjects_ValidJsonFilePath_ExecutesProjects()
     {
         // Arrange
         var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
         var jsonFilePath = "projects.json";
-        var maxGlobalThreads = 10;
-        var memoryThreshold = 1024 * 1024 * 1024; // 1 GB
+        var maxGlobalThreads = 15;
+        var memoryThreshold = 1024 * 1024 * 201; 
         var resourceManager = new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold);
 
         // Act
-        resourceManager.ExecuteProjects();
+        await resourceManager.ExecuteProjectsAsync();
 
         // Assert
         Assert.True(true);
