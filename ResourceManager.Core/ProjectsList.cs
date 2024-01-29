@@ -20,6 +20,7 @@ public class ProjectsList
 /// </summary>
 public class ProjectParameters
 {
+    public readonly string Id = Guid.NewGuid().ToString();
     public int? MemoryCount { get; set; }
     public int? AppTimeout { get; set; }
     public int? TryCount { get; set; }
