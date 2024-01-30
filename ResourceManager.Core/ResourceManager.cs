@@ -11,8 +11,9 @@ public class ResourceManager : IDisposable
     private readonly string _appPath;
     private readonly int _memoryThresholdBytes;
     private readonly List<ProjectParameters> _projects;
-    private readonly SemaphoreSlim _semaphore;
-    private readonly PerformanceCounter _availableMemoryBytes = new("Memory", "Available Bytes");
+    private readonly SemaphoreSlim _globalSemaphore;
+    private readonly PerformanceCounter _availableMemoryBytes = 
+        new("Memory", "Available Bytes");
     private readonly Logger<ResourceManager> _log = new("log")
     {
     #if DEBUG
@@ -30,7 +31,8 @@ public class ResourceManager : IDisposable
     {
         _log.Log($"Initializing resource manager with app path '{appPath}', " +
             $"projects parameters path '{projectsParametersPath}', " +
-            $"max global threads '{maxGlobalThreads}' and memory threshold '{memoryThresholdBytes}'.");
+            $"max global threads '{maxGlobalThreads}' and memory threshold " +
+            $"'{memoryThresholdBytes}'.");
 
         _appPath =
             string.IsNullOrWhiteSpace(appPath)
@@ -41,7 +43,8 @@ public class ResourceManager : IDisposable
                 nameof(appPath))
             : appPath;
 
-        if (string.IsNullOrWhiteSpace(projectsParametersPath) || !File.Exists(projectsParametersPath))
+        if (string.IsNullOrWhiteSpace(projectsParametersPath) 
+            || !File.Exists(projectsParametersPath))
         {
             throw new ArgumentException(
                 $"'{nameof(projectsParametersPath)}' is not a valid path to an existing file.",
@@ -51,7 +54,7 @@ public class ResourceManager : IDisposable
         ArgumentOutOfRangeException.ThrowIfLessThan(maxGlobalThreads, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(memoryThresholdBytes, MIN_MEMORY_THRESHOLD_BYTES);
 
-        _semaphore = new SemaphoreSlim(maxGlobalThreads);
+        _globalSemaphore = new SemaphoreSlim(maxGlobalThreads);
 
         _memoryThresholdBytes = memoryThresholdBytes;
 
@@ -97,6 +100,8 @@ public class ResourceManager : IDisposable
     {
         _log.Log($"[{project.Id}] - Executing project.");
 
+        var projectSemaphore = new SemaphoreSlim(project.MaxThreads ?? 1);
+
         var tasks = new List<Task>();
 
         for (int i = 0; i < project.TryCount; i++)
@@ -105,7 +110,7 @@ public class ResourceManager : IDisposable
 
             _log.Log($"[{project.Id}_{tryId}] instance initiated.");
             
-            tasks.Add(Task.Run(() => ExecuteApp(project, tryId)));
+            tasks.Add(Task.Run(() => ExecuteApp(project, tryId, projectSemaphore)));
         }
 
         _log.Log($"[{project.Id}] - Waiting for all tries to finish.");
@@ -115,7 +120,7 @@ public class ResourceManager : IDisposable
         _log.Log($"[{project.Id}] - Project executed.");
     }
 
-    private void ExecuteApp(ProjectParameters project, int instanceIndex)
+    private void ExecuteApp(ProjectParameters project, int instanceIndex, SemaphoreSlim projectSemaphore)
     {
         var processStartInfo = new ProcessStartInfo
         {
@@ -126,17 +131,19 @@ public class ResourceManager : IDisposable
         };
 
         using var process = new Process { StartInfo = processStartInfo };
-        var memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
 
-        _log.Log($"[{project.Id}_{instanceIndex}] - Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
-
-        _semaphore.Wait();
+        _globalSemaphore.Wait();
+        projectSemaphore.Wait();
 
         _log.Log($"[{project.Id}_{instanceIndex}] - Semaphore acquired.");
 
         try
         {
             _log.Log($"[{project.Id}_{instanceIndex}] - Trying to execute app.");
+            
+            var memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
+
+            _log.Log($"[{project.Id}_{instanceIndex}] - Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
 
             while (!memoryIsEnough)
             {
@@ -163,9 +170,10 @@ public class ResourceManager : IDisposable
         }
         finally
         {
-            var count = _semaphore.Release();
+            var projectCount = projectSemaphore.Release();
+            var globalCount = _globalSemaphore.Release();
             
-            _log.Log($"[{project.Id}_{instanceIndex}] - Semaphore released. Semaphore count: {count}.");
+            _log.Log($"[{project.Id}_{instanceIndex}] - Semaphore released. Global semaphore count: {globalCount}, project semaphore count: {projectCount}.");
         }
 
     }
@@ -173,6 +181,6 @@ public class ResourceManager : IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-        _semaphore.Dispose();
+        _globalSemaphore.Dispose();
     }
 }
