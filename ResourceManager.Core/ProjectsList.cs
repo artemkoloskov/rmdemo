@@ -11,7 +11,16 @@ public class ProjectsList
 
     public static ProjectsList? FromJson(string json)
     {
-        return JsonConvert.DeserializeObject<ProjectsList>(json);
+        var result = JsonConvert.DeserializeObject<ProjectsList>(json);
+
+        var i = 1;
+
+        foreach (var project in result?.Projects!)
+        {
+            project.Id = i++;
+        }
+
+        return result;
     }
 }
 
@@ -20,7 +29,8 @@ public class ProjectsList
 /// </summary>
 public class ProjectParameters
 {
-    public readonly string Id = Guid.NewGuid().ToString();
+    [JsonIgnore]
+    public int Id = 0;
     public int? MemoryCount { get; set; }
     public int? AppTimeout { get; set; }
     public int? TryCount { get; set; }
