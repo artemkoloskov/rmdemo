@@ -9,7 +9,7 @@ var cancellationToken = new CancellationTokenSource();
 var _timer = new Timer(
     _ => cancellationToken.Cancel(), 
     null, 
-    TimeSpan.FromSeconds(_appTimeout),
+    TimeSpan.FromMilliseconds(_appTimeout),
     Timeout.InfiniteTimeSpan);
 
 var memory = new byte[_memoryCount * 1024 * 1024];
