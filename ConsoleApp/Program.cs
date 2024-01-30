@@ -9,23 +9,17 @@ try
     string _instanceId = ArgumentParser.ParseInstanceId(args);
     bool _shouldLog = ArgumentParser.ParseLog(args);
 
-    var cancellationToken = new CancellationTokenSource();
-    var _timer = new Timer(
-        _ => cancellationToken.Cancel(),
-        null,
-        TimeSpan.FromMilliseconds(_appTimeout),
-        Timeout.InfiniteTimeSpan);
+    using var cancellationToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(_appTimeout));
 
-    new Thread(() => AllocateMemory(_memoryCount, _instanceId, _shouldLog)).Start();
-
-    long counter = 0;
+    var memory = AllocateMemory(_memoryCount, _instanceId, _shouldLog);
+    var rnd = new Random();
 
     while (!cancellationToken.IsCancellationRequested)
     {
-        counter++;
+        memory[rnd.Next(0, memory.Length - 1)]++;
     }
 
-    Log($"[{_instanceId}] Counter: {counter}", _shouldLog);
+    Log($"[{_instanceId}] Allocated memory: {memory.Length / 1024 / 1024} MB.", _shouldLog);
 }
 catch (Exception ex)
 {
@@ -35,13 +29,6 @@ catch (Exception ex)
 static byte[] AllocateMemory(int memoryCount, string instanceId, bool shouldLog)
 {
     var memory = new byte[memoryCount * 1024 * 1024];
-
-    for (int i = 0; i < memory.Length; i++)
-    {
-        memory[i] = 1;
-    }
-    
-    Log($"[{instanceId}] Allocated memory: {memory.Length/1024/1024} MB.", shouldLog);
 
     return memory;
 }
