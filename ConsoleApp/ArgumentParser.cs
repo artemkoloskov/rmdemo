@@ -4,6 +4,7 @@ internal static class ArgumentParser
 {
     private const string _appTimeoutKey = "--app-timeout";
     private const string _memoryCountKey = "--memory-count";
+    private const string _intanceIdKey = "--instance-id";
     private const int _appTimeoutDefault = 1;
     private const int _memoryCountDefault = 10;
 
@@ -51,6 +52,28 @@ internal static class ArgumentParser
         Console.WriteLine($"'{value}' is not a valid value for " +
             $"'{_memoryCountKey}', using default value - {_memoryCountDefault} MB");
         return _memoryCountDefault;
+    }
+
+    public static string ParseInstanceId(string[] args)
+    {
+        var keyIndex = Array.IndexOf(args, _intanceIdKey);
+
+        if (keyIndex == -1)
+        {
+            Console.WriteLine($"'{_intanceIdKey}' argument not found, using " +
+                $"default value - '0_0'");
+            return "0_0";
+        }
+
+        var value = args[keyIndex + 1];
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        Console.WriteLine($"'{value}' is empty or whitespace, using default value - '0_0'");
+        return "0_0";
     }
 
     public static void CheckArgs(string[] args)

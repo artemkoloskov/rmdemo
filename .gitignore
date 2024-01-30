@@ -4,3 +4,4 @@ obj/
 
 # Visual Studio Code specific files
 .vscode/
+*.log
