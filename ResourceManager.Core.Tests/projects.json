@@ -1,6 +1,24 @@
 {
     "Projects": [
-        { "MemoryCount": 100, "AppTimeout": 1, "TryCount": 100, "MaxThreads": 10 },
-        { "MemoryCount": 200, "AppTimeout": 2, "TryCount": 100, "MaxThreads": 10 }
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 },
+        { "MemoryCount": 3500, "AppTimeout": 500, "TryCount": 5, "MaxThreads": 10 }
     ]
 }
