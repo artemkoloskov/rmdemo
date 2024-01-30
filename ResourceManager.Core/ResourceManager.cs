@@ -1,9 +1,10 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.Versioning;
 
 namespace ResourceManager.Core;
 
 [SupportedOSPlatform("windows")]
+public class ResourceManager : IDisposable
 {
     private const int MIN_MEMORY_THRESHOLD_BYTES = 1024 * 1024 * 200; // 200 MB
     private const int DELAY_BETWEEN_MEMORY_CHECKS = 50;
@@ -12,7 +13,7 @@ namespace ResourceManager.Core;
     private readonly List<ProjectParameters> _projects;
     private readonly SemaphoreSlim _semaphore;
     private readonly PerformanceCounter _availableMemoryBytes = new("Memory", "Available Bytes");
-    private readonly Logger<ResourceManager> _log = new(".log")
+    private readonly Logger<ResourceManager> _log = new("log")
     {
     #if DEBUG
         IsEnabled = true
@@ -66,7 +67,8 @@ namespace ResourceManager.Core;
 
     public async Task ExecuteProjectsAsync()
     {
-        _log.Log($"Executing projects.");
+        _log.Log($"Setting up projects.");
+        _log.Log($"'Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
 
         var tasks = new List<Task>();
 
@@ -78,23 +80,15 @@ namespace ResourceManager.Core;
 
             var task = Task.Run(async () =>
             {
-                await _semaphore.WaitAsync();
-                _log.Log($"'{project.Id}' - Semaphore acquired.");
-
-                try
-                {
-                    await ExecuteProjectAsync(project);
-                }
-                finally
-                {
-                    _semaphore.Release();
-                    _log.Log($"'{project.Id}' - Semaphore released.");
-                }
+                await ExecuteProjectAsync(project);
             });
 
             tasks.Add(task);
-            _log.Log($"'{project.Id}' - Project finished.");
+
+            _log.Log($"'{project.Id}' - Project set up.");
         }
+
+        _log.Log($"Waiting for all projects to finish.");
 
         await Task.WhenAll(tasks);
     }
@@ -102,20 +96,26 @@ namespace ResourceManager.Core;
     private async Task ExecuteProjectAsync(ProjectParameters project)
     {
         _log.Log($"'{project.Id}' - Executing project.");
+
         var tasks = new List<Task>();
 
         for (int i = 0; i < project.TryCount; i++)
         {
-            _log.Log($"'{project.Id}' - try '{i + 1}' started.");
-            tasks.Add(Task.Run(() => ExecuteApp(project, i + 1)));
+            var tryId = i + 1;
+
+            _log.Log($"'{project.Id}' - try '{tryId}' started.");
+            
+            tasks.Add(Task.Run(() => ExecuteApp(project, tryId)));
         }
 
         _log.Log($"'{project.Id}' - Waiting for all tries to finish.");
+
         await Task.WhenAll(tasks);
+
         _log.Log($"'{project.Id}' - Project executed.");
     }
 
-    private void ExecuteApp(ProjectParameters project, int instanceNumber)
+    private void ExecuteApp(ProjectParameters project, int instanceIndex)
     {
         var processStartInfo = new ProcessStartInfo
         {
@@ -127,26 +127,51 @@ namespace ResourceManager.Core;
         using var process = new Process { StartInfo = processStartInfo };
         var memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes;
 
+        _log.Log($"'{project.Id}' [{instanceIndex}] - Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
+
+        _semaphore.Wait();
+
+        _log.Log($"'{project.Id}' [{instanceIndex}] - Semaphore acquired.");
+
         try
         {
-            _log.Log($"'{project.Id}' [{instanceNumber}] - Trying to execute app.");
+            _log.Log($"'{project.Id}' [{instanceIndex}] - Trying to execute app.");
 
             while (!memoryIsEnough)
             {
-                _log.Log($"'{project.Id}' [{instanceNumber}] - Memory is not enough, waiting.");
+                _log.Log($"'{project.Id}' [{instanceIndex}] - Memory is not enough, waiting.");
+
                 Thread.Sleep(DELAY_BETWEEN_MEMORY_CHECKS);
 
                 memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes;
             }
 
-            _log.Log($"'{project.Id}' [{instanceNumber}] - Memory is enough, executing app.");
+            _log.Log($"'{project.Id}' [{instanceIndex}] - Memory is enough, executing app.");
+
             process.Start();
+
+            _log.Log($"'{project.Id}' [{instanceIndex}] - App execution started.");
+
             process.WaitForExit();
-            _log.Log($"'{project.Id}' [{instanceNumber}] - App executed successfully.");
+
+            _log.Log($"'{project.Id}' [{instanceIndex}] - App execution finished.");
         }
         catch (Exception ex)
         {
-            _log.Log($"'{project.Id}' [{instanceNumber}] - Failed to execute project. Exception: '{ex}'");
+            _log.Log($"'{project.Id}' [{instanceIndex}] - Failed to execute project. Exception: '{ex}'");
         }
+        finally
+        {
+            var count = _semaphore.Release();
+            
+            _log.Log($"'{project.Id}' [{instanceIndex}] - Semaphore released. Semaphore count: {count}.");
+        }
+
+    }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        _semaphore.Dispose();
     }
 }
