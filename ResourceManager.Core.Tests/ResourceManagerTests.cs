@@ -1,5 +1,8 @@
+using System.Runtime.Versioning;
+
 namespace ResourceManager.Core.Tests;
 
+[SupportedOSPlatform("windows")]
 public class ResourceManagerTests
 {
     [Fact]

@@ -4,10 +4,19 @@ public class Logger<T>
 {
     private readonly string _filePath;
     private readonly string _className;
+    private readonly object _lock = new();
 
+    public bool IsEnabled { get; set; } = true;
+
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public Logger(string filePath)
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     {
-#if DEBUG
+        if (!IsEnabled)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(filePath))
         {
             throw new ArgumentException(
@@ -26,22 +35,27 @@ public class Logger<T>
         {
             File.WriteAllText(_filePath, string.Empty);
         }
-#endif
     }
 
     public void Log(string message)
     {
-#if DEBUG
+        if (!IsEnabled)
+        {
+            return;
+        }
+
         try
         {
-            using StreamWriter writer = new(_filePath, true);
+            lock (_lock)
+            {
+                using StreamWriter writer = new(_filePath, true);
 
-            writer.WriteLine($"[{DateTime.Now}] - {_className}: {message}");
+                writer.WriteLine($"[{DateTime.Now}] - {_className}: {message}");
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error writing to log file: {ex.Message}");
         }
-#endif
     }
 }

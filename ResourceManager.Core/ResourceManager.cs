@@ -1,8 +1,9 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
+using System.Runtime.Versioning;
 
 namespace ResourceManager.Core;
 
-public class ResourceManager
+[SupportedOSPlatform("windows")]
 {
     private const int MIN_MEMORY_THRESHOLD_BYTES = 1024 * 1024 * 200; // 200 MB
     private const int DELAY_BETWEEN_MEMORY_CHECKS = 50;
@@ -11,7 +12,14 @@ public class ResourceManager
     private readonly List<ProjectParameters> _projects;
     private readonly SemaphoreSlim _semaphore;
     private readonly PerformanceCounter _availableMemoryBytes = new("Memory", "Available Bytes");
-    private readonly Logger<ResourceManager> _log = new("log.log");
+    private readonly Logger<ResourceManager> _log = new(".log")
+    {
+    #if DEBUG
+        IsEnabled = true
+    #else
+        IsEnabled = false
+    #endif
+    };
 
     public ResourceManager(
         string appPath,
