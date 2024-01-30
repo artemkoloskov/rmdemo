@@ -120,8 +120,9 @@ public class ResourceManager : IDisposable
         var processStartInfo = new ProcessStartInfo
         {
             FileName = _appPath,
-            Arguments = $"--app-timeout {project.AppTimeout} --memory-count {project.MemoryCount}",
-            CreateNoWindow = true
+            Arguments = $"--app-timeout {project.AppTimeout} --memory-count {project.MemoryCount} --instance-id {project.Id}_{instanceIndex}",
+            CreateNoWindow = true,
+            WorkingDirectory = "../../../../"
         };
 
         using var process = new Process { StartInfo = processStartInfo };
@@ -154,7 +155,7 @@ public class ResourceManager : IDisposable
 
             process.WaitForExit();
 
-            _log.Log($"'{project.Id}' [{instanceIndex}] - App execution finished.");
+            _log.Log($"'{project.Id}' [{instanceIndex}] - App execution finished. Exit code: '{process.ExitCode}'.");
         }
         catch (Exception ex)
         {

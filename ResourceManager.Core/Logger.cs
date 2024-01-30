@@ -35,6 +35,13 @@ public class Logger<T>
         {
             File.WriteAllText(_filePath, string.Empty);
         }
+
+        var consoleAppLogPath = "../../../../ConsoleApp.log";
+
+        if (File.Exists(consoleAppLogPath))
+        {
+            File.WriteAllText(consoleAppLogPath, string.Empty);
+        }
     }
 
     public void Log(string message)
