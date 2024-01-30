@@ -74,7 +74,7 @@ public class ResourceManager : IDisposable
 
         foreach (var project in _projects)
         {
-            _log.Log($"'{project.Id}' - Starting project with memory count '{project.MemoryCount}', " +
+            _log.Log($"[{project.Id}] - Starting project with memory count '{project.MemoryCount}', " +
                 $"app timeout '{project.AppTimeout}', try count '{project.TryCount}'  " +
                 $"and max threads '{project.MaxThreads}'.");
 
@@ -85,7 +85,7 @@ public class ResourceManager : IDisposable
 
             tasks.Add(task);
 
-            _log.Log($"'{project.Id}' - Project set up.");
+            _log.Log($"[{project.Id}] - Project set up.");
         }
 
         _log.Log($"Waiting for all projects to finish.");
@@ -95,7 +95,7 @@ public class ResourceManager : IDisposable
 
     private async Task ExecuteProjectAsync(ProjectParameters project)
     {
-        _log.Log($"'{project.Id}' - Executing project.");
+        _log.Log($"[{project.Id}] - Executing project.");
 
         var tasks = new List<Task>();
 
@@ -103,16 +103,16 @@ public class ResourceManager : IDisposable
         {
             var tryId = i + 1;
 
-            _log.Log($"'{project.Id}' - try '{tryId}' started.");
+            _log.Log($"[{project.Id}_{tryId}] instance initiated.");
             
             tasks.Add(Task.Run(() => ExecuteApp(project, tryId)));
         }
 
-        _log.Log($"'{project.Id}' - Waiting for all tries to finish.");
+        _log.Log($"[{project.Id}] - Waiting for all tries to finish.");
 
         await Task.WhenAll(tasks);
 
-        _log.Log($"'{project.Id}' - Project executed.");
+        _log.Log($"[{project.Id}] - Project executed.");
     }
 
     private void ExecuteApp(ProjectParameters project, int instanceIndex)
@@ -120,52 +120,52 @@ public class ResourceManager : IDisposable
         var processStartInfo = new ProcessStartInfo
         {
             FileName = _appPath,
-            Arguments = $"--app-timeout {project.AppTimeout} --memory-count {project.MemoryCount} --instance-id {project.Id}_{instanceIndex}",
+            Arguments = $"--app-timeout {project.AppTimeout} --memory-count {project.MemoryCount} --instance-id {project.Id}_{instanceIndex} --log {_log.IsEnabled}",
             CreateNoWindow = true,
             WorkingDirectory = "../../../../"
         };
 
         using var process = new Process { StartInfo = processStartInfo };
-        var memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes;
+        var memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
 
-        _log.Log($"'{project.Id}' [{instanceIndex}] - Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
+        _log.Log($"[{project.Id}_{instanceIndex}] - Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
 
         _semaphore.Wait();
 
-        _log.Log($"'{project.Id}' [{instanceIndex}] - Semaphore acquired.");
+        _log.Log($"[{project.Id}_{instanceIndex}] - Semaphore acquired.");
 
         try
         {
-            _log.Log($"'{project.Id}' [{instanceIndex}] - Trying to execute app.");
+            _log.Log($"[{project.Id}_{instanceIndex}] - Trying to execute app.");
 
             while (!memoryIsEnough)
             {
-                _log.Log($"'{project.Id}' [{instanceIndex}] - Memory is not enough, waiting.");
+                _log.Log($"[{project.Id}_{instanceIndex}] - Memory is not enough, waiting.");
 
                 Thread.Sleep(DELAY_BETWEEN_MEMORY_CHECKS);
 
-                memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes;
+                memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
             }
 
-            _log.Log($"'{project.Id}' [{instanceIndex}] - Memory is enough, executing app.");
+            _log.Log($"[{project.Id}_{instanceIndex}] - Memory is enough, executing app.");
 
             process.Start();
 
-            _log.Log($"'{project.Id}' [{instanceIndex}] - App execution started.");
+            _log.Log($"[{project.Id}_{instanceIndex}] - App execution started.");
 
             process.WaitForExit();
 
-            _log.Log($"'{project.Id}' [{instanceIndex}] - App execution finished. Exit code: '{process.ExitCode}'.");
+            _log.Log($"[{project.Id}_{instanceIndex}] - App execution finished. Exit code: '{process.ExitCode}'.");
         }
         catch (Exception ex)
         {
-            _log.Log($"'{project.Id}' [{instanceIndex}] - Failed to execute project. Exception: '{ex}'");
+            _log.Log($"[{project.Id}_{instanceIndex}] - Failed to execute project. Exception: '{ex}'");
         }
         finally
         {
             var count = _semaphore.Release();
             
-            _log.Log($"'{project.Id}' [{instanceIndex}] - Semaphore released. Semaphore count: {count}.");
+            _log.Log($"[{project.Id}_{instanceIndex}] - Semaphore released. Semaphore count: {count}.");
         }
 
     }

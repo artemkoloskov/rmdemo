@@ -5,7 +5,8 @@ internal static class ArgumentParser
     private const string _appTimeoutKey = "--app-timeout";
     private const string _memoryCountKey = "--memory-count";
     private const string _intanceIdKey = "--instance-id";
-    private const int _appTimeoutDefault = 1;
+    private const string _logKey = "--log";
+    private const int _appTimeoutDefault = 200;
     private const int _memoryCountDefault = 10;
 
     public static int ParseAppTimeout(string[] args)
@@ -15,7 +16,7 @@ internal static class ArgumentParser
         if (keyIndex == -1)
         {
             Console.WriteLine($"'{_appTimeoutKey}' argument not found, using " +
-                $"default value - {_appTimeoutDefault} seconds");
+                $"default value - {_appTimeoutDefault} milliseconds");
             return _appTimeoutDefault;
         }
 
@@ -27,7 +28,7 @@ internal static class ArgumentParser
         }
 
         Console.WriteLine($"'{value}' is not a valid value for " +
-            $"'{_appTimeoutKey}', using default value - {_appTimeoutDefault} seconds");
+            $"'{_appTimeoutKey}', using default value - {_appTimeoutDefault} milliseconds");
         return _appTimeoutDefault;
     }
 
@@ -76,6 +77,29 @@ internal static class ArgumentParser
         return "0_0";
     }
 
+    public static bool ParseLog(string[] args)
+    {
+        var keyIndex = Array.IndexOf(args, _logKey);
+
+        if (keyIndex == -1)
+        {
+            Console.WriteLine($"'{_logKey}' argument not found, using " +
+                $"default value - 'false'");
+            return false;
+        }
+
+        var value = args[keyIndex + 1];
+
+        if (bool.TryParse(value, out var result))
+        {
+            return result;
+        }
+
+        Console.WriteLine($"'{value}' is not a valid value for " +
+            $"'{_logKey}', using default value - 'false'");
+        return false;
+    }
+
     public static void CheckArgs(string[] args)
     {
         if (args.Length == 0)
@@ -93,7 +117,7 @@ internal static class ArgumentParser
     {
         Console.WriteLine("===================================================");
         Console.WriteLine("Usage:");
-        Console.WriteLine($"    {_appTimeoutKey} <seconds>");
+        Console.WriteLine($"    {_appTimeoutKey} <milliseconds>");
         Console.WriteLine($"    {_memoryCountKey} <MB>");
         Console.WriteLine("===================================================");
         Console.WriteLine();
