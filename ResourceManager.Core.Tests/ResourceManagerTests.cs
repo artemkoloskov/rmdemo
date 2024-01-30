@@ -93,7 +93,7 @@ public class ResourceManagerTests
         var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
         var jsonFilePath = "projects.json";
         var maxGlobalThreads = 15;
-        var memoryThreshold = 1024 * 1024 * 201; 
+        var memoryThreshold = 1024 * 1024 * 1001; 
         var resourceManager = new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold);
 
         // Act

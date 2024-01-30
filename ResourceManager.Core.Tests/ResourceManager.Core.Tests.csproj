@@ -30,6 +30,9 @@
 		<None Update="projects.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Update="testdataset.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
   </ItemGroup>
 
 </Project>
