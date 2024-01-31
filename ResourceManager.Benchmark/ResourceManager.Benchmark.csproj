@@ -13,6 +13,16 @@
 
   <ItemGroup>
     <PackageReference Include="Benchmarkdotnet" Version="0.13.12" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="projects.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="easyprojects.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
