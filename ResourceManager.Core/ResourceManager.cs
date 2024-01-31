@@ -1,5 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.Versioning;
+using System.Text;
 
 namespace ResourceManager.Core;
 
@@ -17,6 +18,8 @@ public class ResourceManager : IDisposable
         IsEnabled = false
 #endif
     };
+
+    private string _reportPath = "";
 
     public ResourceManager(
         string appPath,
@@ -48,6 +51,19 @@ public class ResourceManager : IDisposable
         _log.IsEnabled = true;
     }
 
+    public void EnableReporting(string reportPath)
+    {
+        if (string.IsNullOrWhiteSpace(reportPath) 
+            || !Directory.Exists(Path.GetDirectoryName(reportPath)))
+        {
+            throw new ArgumentException(
+                $"'{nameof(reportPath)}' is not a valid path to an existing directory.",
+                nameof(reportPath));
+        }
+
+        _reportPath = reportPath;
+    }
+
     public void ExecuteProjects()
     {
         _log.Log($"Setting up projects.");
@@ -57,6 +73,30 @@ public class ResourceManager : IDisposable
         _log.Log($"Waiting for all projects to finish.");
 
         Task.WaitAll([.. tasks]);
+
+        _log.Log($"All projects finished.");
+
+        SaveReport();
+    }
+
+    private void SaveReport()
+    {
+        if (string.IsNullOrWhiteSpace(_reportPath))
+        {
+            return;
+        }
+
+        var report = new StringBuilder();
+
+        var totalExecutions = _projects.Sum(p => p.TryCount);
+        var totalProjectedTime = _projects.Sum(p => p.TryCount * p.AppTimeout) / 1000;
+
+        report.AppendLine("Project number,Total executions,Projected sequential execution time (s),Actual execution time (s),Average CPU usage (%),Average memory in use (MB)");
+        report.AppendLine($"{_projects.Count},{totalExecutions},{totalProjectedTime},{ResourceMonitor.TotalProcessingTime() / 1000},{ResourceMonitor.AverageProcessorTimeInUse()},{ResourceMonitor.AverageMemoryInUseMb() / 1024 / 1024}");
+
+        var reportPath = Path.Combine(_reportPath, $"report_{DateTime.Now:u}.txt");
+
+        File.WriteAllText(reportPath, report.ToString());
     }
 
     private List<Task> GetProjectsTaskList()
