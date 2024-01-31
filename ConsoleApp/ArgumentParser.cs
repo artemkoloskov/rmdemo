@@ -119,6 +119,8 @@ internal static class ArgumentParser
         Console.WriteLine("Usage:");
         Console.WriteLine($"    {_appTimeoutKey} <milliseconds>");
         Console.WriteLine($"    {_memoryCountKey} <MB>");
+        Console.WriteLine($"    {_intanceIdKey} <instance id>");
+        Console.WriteLine($"    {_logKey} <true/false>");
         Console.WriteLine("===================================================");
         Console.WriteLine();
     }
