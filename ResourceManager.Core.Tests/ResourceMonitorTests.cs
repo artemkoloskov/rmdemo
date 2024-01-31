@@ -9,12 +9,12 @@ public class ResourceMonitorTests
     public void EnoughResources_EnoughProcessorTimeNotEnoughMemory_ReturnsFalse()
     {
         // Arrange
-        _ = ResourceMonitor.TotalProcessingTime();
+        var resourceMonitor = new ResourceMonitor(201 * 1024 * 1024, 5);
         Task.Run(PutLoadOnMemory);
         Thread.Sleep(3000);
 
         // Act
-        var enoughResources = ResourceMonitor.EnoughResources(2000);
+        var enoughResources = resourceMonitor.EnoughResources(2000);
 
         // Assert
         Assert.False(enoughResources);
@@ -24,7 +24,7 @@ public class ResourceMonitorTests
     public void EnoughResources_EnoughMemoryNotEnoughProcessorTime_ReturnsFalse()
     {
         // Arrange
-        _ = ResourceMonitor.TotalProcessingTime();
+        var resourceMonitor = new ResourceMonitor(201 * 1024 * 1024, 5);
         Task.Run(PutLoadOnProcessor);
         Task.Run(PutLoadOnProcessor);
         Task.Run(PutLoadOnProcessor);
@@ -33,7 +33,7 @@ public class ResourceMonitorTests
         Thread.Sleep(1000);
 
         // Act
-        var enoughResources = ResourceMonitor.EnoughResources(2000);
+        var enoughResources = resourceMonitor.EnoughResources(2000);
 
         // Assert
         Assert.False(enoughResources);
@@ -43,10 +43,11 @@ public class ResourceMonitorTests
     public void EnoughResources_NoLoadOnSystem_ReturnsTrue()
     {
         // Arrange
+        var resourceMonitor = new ResourceMonitor(201 * 1024 * 1024, 5);
         Thread.Sleep(1000);
 
         // Act
-        var enoughResources = ResourceMonitor.EnoughResources(2000);
+        var enoughResources = resourceMonitor.EnoughResources(2000);
 
         // Assert
         Assert.True(enoughResources);
@@ -56,13 +57,13 @@ public class ResourceMonitorTests
     public void AverageProcessorTimeInUse_LoadOnSystem_ReturnsValue()
     {
         // Arrange
-        _ = ResourceMonitor.TotalProcessingTime();
+        var resourceMonitor = new ResourceMonitor(201 * 1024 * 1024, 5);
         Task.Run(() => PutLoadOnProcessor());
         Thread.Sleep(1000);
-        _ = ResourceMonitor.EnoughResources(2000);
+        _ = resourceMonitor.EnoughResources(2000);
 
         // Act
-        var averageProcessorTimeInUse = ResourceMonitor.AverageProcessorTimeInUse();
+        var averageProcessorTimeInUse = resourceMonitor.AverageProcessorTimeInUse();
 
         // Assert
         Assert.True(averageProcessorTimeInUse > 0);
@@ -72,13 +73,13 @@ public class ResourceMonitorTests
     public void AverageMemoryInUseMb_LoadOnSystem_ReturnsValue()
     {
         // Arrange
-        _ = ResourceMonitor.TotalProcessingTime();
+        var resourceMonitor = new ResourceMonitor(201 * 1024 * 1024, 5);
         Task.Run(() => PutLoadOnMemory());
         Thread.Sleep(1000);
-        _ = ResourceMonitor.EnoughResources(2000);
+        _ = resourceMonitor.EnoughResources(2000);
 
         // Act
-        var averageMemoryInUseMb = ResourceMonitor.AverageMemoryInUseMb();
+        var averageMemoryInUseMb = resourceMonitor.AverageMemoryInUseMb();
 
         // Assert
         Assert.True(averageMemoryInUseMb > 0);
@@ -88,12 +89,12 @@ public class ResourceMonitorTests
     public void TotalProcessingTime_LoadOnSystem_ReturnsValue()
     {
         // Arrange
-        _ = ResourceMonitor.TotalProcessingTime();
+        var resourceMonitor = new ResourceMonitor(201 * 1024 * 1024, 5);
         Task.Run(() => PutLoadOnProcessor());
         Thread.Sleep(1000);
 
         // Act
-        var totalProcessingTime = ResourceMonitor.TotalProcessingTime();
+        var totalProcessingTime = resourceMonitor.TotalProcessingTime();
 
         // Assert
         Assert.True(totalProcessingTime > 1000, $"Total processing time is {totalProcessingTime} ms.");

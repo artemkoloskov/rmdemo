@@ -10,6 +10,7 @@ public class ResourceManager : IDisposable
     private readonly string _appPath;
     private readonly List<ProjectParameters> _projects;
     private readonly SemaphoreSlim _globalSemaphore;
+    private readonly ResourceMonitor _resourceMonitor;
     private readonly Logger<ResourceManager> _log = new("log")
     {
 #if DEBUG
@@ -36,8 +37,7 @@ public class ResourceManager : IDisposable
 
         ArgumentOutOfRangeException.ThrowIfLessThan(maxGlobalThreads, 1);
 
-        ResourceMonitor.Configure(memoryThresholdBytes, processorTimeThreshold);
-
+        _resourceMonitor = new ResourceMonitor(memoryThresholdBytes, processorTimeThreshold);
         _globalSemaphore = new SemaphoreSlim(maxGlobalThreads);
         _appPath = ValidateAppPath(appPath);
         _projects = ProjectsList.ParseProjects(projectsParametersPath);
@@ -66,6 +66,8 @@ public class ResourceManager : IDisposable
 
     public void ExecuteProjects()
     {
+        _resourceMonitor.RestartStopwatch();
+
         _log.Log($"Setting up projects.");
 
         List<Task> tasks = GetProjectsTaskList();
@@ -90,9 +92,9 @@ public class ResourceManager : IDisposable
 
         var totalExecutions = _projects.Sum(p => p.TryCount);
         var totalProjectedTime = _projects.Sum(p => p.TryCount * p.AppTimeout) / 1000;
-        var totalActualTime = ResourceMonitor.TotalProcessingTime() / 1000;
-        var totalCpuUsage = ResourceMonitor.AverageProcessorTimeInUse();
-        var totalMemoryUsage = (int)ResourceMonitor.AverageMemoryInUseMb();
+        var totalActualTime = _resourceMonitor.TotalProcessingTime() / 1000;
+        var totalCpuUsage = _resourceMonitor.AverageProcessorTimeInUse();
+        var totalMemoryUsage = (int)_resourceMonitor.AverageMemoryInUseMb();
 
         _log.Log($"Saving report to '{_reportPath}'. Total executions: " +
             $"{totalExecutions}, total projected time: {totalProjectedTime}, " +
@@ -187,7 +189,7 @@ public class ResourceManager : IDisposable
                 $"[Thread:{Environment.CurrentManagedThreadId}] - " +
                 $"Trying to execute app.");
 
-            ResourceMonitor.WaitForEnoughResources(project.MemoryCount ?? 0);
+            _resourceMonitor.WaitForEnoughResources(project.MemoryCount ?? 0);
 
             process.Start();
 

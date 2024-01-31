@@ -156,7 +156,7 @@ public class ResourceManagerTests
             maxGlobalThreads, 
             memoryThreshold,
             processorTimeThreshold);
-        resourceManager.EnableReporting("Z:\\temp");
+        resourceManager.EnableReporting("C:\\temp");
 
         // Act
         resourceManager.ExecuteProjects();
@@ -180,7 +180,7 @@ public class ResourceManagerTests
             maxGlobalThreads, 
             memoryThreshold,
             processorTimeThreshold);
-        resourceManager.EnableReporting("Z:\\temp");
+        resourceManager.EnableReporting("C:\\temp");
 
         // Act
         resourceManager.ExecuteProjects();
@@ -226,7 +226,7 @@ public class ResourceManagerTests
             processorTimeThreshold);
 
         // Act
-        var exception = Record.Exception(() => resourceManager.EnableReporting("Z:\\temp"));
+        var exception = Record.Exception(() => resourceManager.EnableReporting("C:\\temp"));
 
         // Assert
         Assert.Null(exception);

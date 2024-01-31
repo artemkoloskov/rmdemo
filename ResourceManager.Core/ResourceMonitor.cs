@@ -10,13 +10,14 @@ public class ResourceMonitor
     private const int DELAY_BETWEEN_CHECKS = 50;
     private const float MIN_PROCESSOR_TIME_THRESHOLD = 5f;
     private const int MIN_MEMORY_THRESHOLD_BYTES = 1024 * 1024 * 200;
-    private static readonly PerformanceCounter _availableMemoryBytes =
+    private readonly PerformanceCounter _availableMemoryBytes =
         new("Memory", "Available Bytes");
-    private static readonly PerformanceCounter _processorTime =
+    private readonly PerformanceCounter _processorTime =
         new("Processor", "% Processor Time", "_Total");
-
-    private static readonly Stopwatch _stopwatch = new();
-    private static readonly Logger<ResourceMonitor> _log = new("log")
+    private readonly int _memoryThresholdBytes = MIN_MEMORY_THRESHOLD_BYTES;
+    private readonly float _processorTimeThreshold = MIN_PROCESSOR_TIME_THRESHOLD;
+    private readonly Stopwatch _stopwatch = new();
+    private readonly Logger<ResourceMonitor> _log = new("log")
     {
 #if DEBUG
         IsEnabled = true
@@ -25,24 +26,17 @@ public class ResourceMonitor
 #endif
     };
 
-    private static int _memoryThresholdBytes = MIN_MEMORY_THRESHOLD_BYTES;
-    private static float _processorTimeThreshold = MIN_PROCESSOR_TIME_THRESHOLD;
-    private static int _processorTimeCallsCount = 0;
-    private static float _processorTimeSum = 0;
-    private static int _memoryCallsCount = 0;
-    private static long _memorySumMb = 0;
+    private int _processorTimeCallsCount = 0;
+    private float _processorTimeSum = 0;
+    private int _memoryCallsCount = 0;
+    private long _memorySumMb = 0;
 
 
-    static ResourceMonitor()
+    public ResourceMonitor(int memoryThresholdBytes, float processorTimeThreshold)
     {
         _stopwatch.Start();
         _processorTime.NextValue();
 
-        _log.Log("ResourceMonitor initialized.");
-    }
-
-    public static void Configure(int memoryThresholdBytes, float processorTimeThreshold)
-    {
         _log.Log($"Configuring ResourceMonitor with " +
             $"memoryThresholdBytes: {memoryThresholdBytes} and " +
             $"processorTimeThreshold: {processorTimeThreshold}");
@@ -52,9 +46,11 @@ public class ResourceMonitor
 
         _memoryThresholdBytes = memoryThresholdBytes;
         _processorTimeThreshold = processorTimeThreshold;
+
+        _log.Log("ResourceMonitor initialized.");
     }
 
-    public static void WaitForEnoughResources(int memoryToAllocateMb)
+    public void WaitForEnoughResources(int memoryToAllocateMb)
     {
         _log.Log($"Waiting for enough resources to allocate " +
             $"{memoryToAllocateMb} MB.");
@@ -68,12 +64,12 @@ public class ResourceMonitor
             $"{memoryToAllocateMb} MB.");
     }
 
-    public static bool EnoughResources(int memoryToAllocateMb)
+    public bool EnoughResources(int memoryToAllocateMb)
     {
         return EnoughProcessorTime() && EnoughMemory(memoryToAllocateMb);
     }
 
-    public static int AverageProcessorTimeInUse()
+    public int AverageProcessorTimeInUse()
     {
         if (_processorTimeCallsCount == 0)
         {
@@ -89,7 +85,7 @@ public class ResourceMonitor
         return (int)result;
     }
 
-    public static long AverageMemoryInUseMb()
+    public long AverageMemoryInUseMb()
     {
         if (_memoryCallsCount == 0)
         {
@@ -111,7 +107,12 @@ public class ResourceMonitor
         return result;
     }
 
-    public static long TotalProcessingTime()
+    public void RestartStopwatch()
+    {
+        _stopwatch.Restart();
+    }
+
+    public long TotalProcessingTime()
     {
         var result = _stopwatch.ElapsedMilliseconds;
 
@@ -120,7 +121,7 @@ public class ResourceMonitor
         return result;
     }
 
-    private static bool EnoughProcessorTime()
+    private bool EnoughProcessorTime()
     {
         var availableProcessorTime = 100 - GetProcessorTime();
 
@@ -134,7 +135,7 @@ public class ResourceMonitor
         return result;
     }
 
-    private static bool EnoughMemory(int memoryToAllocateMb)
+    private bool EnoughMemory(int memoryToAllocateMb)
     {
         var availableMemoryMb = GetAvailableMemoryMb();
         var memoryThresholdMb = _memoryThresholdBytes / 1024 / 1024;
@@ -146,7 +147,7 @@ public class ResourceMonitor
         return availableMemoryMb > memoryThresholdMb + memoryToAllocateMb;
     }
 
-    private static long GetAvailableMemoryMb()
+    private long GetAvailableMemoryMb()
     {
         var memory = _availableMemoryBytes.RawValue / 1024 / 1024;
         _memoryCallsCount++;
@@ -155,7 +156,7 @@ public class ResourceMonitor
         return memory;
     }
 
-    private static float GetProcessorTime()
+    private float GetProcessorTime()
     {
         float processorTime = _processorTime.NextValue();
         _processorTimeCallsCount++;
