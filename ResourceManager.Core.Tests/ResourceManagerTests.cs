@@ -87,7 +87,7 @@ public class ResourceManagerTests
     }
 
     [Fact]
-    public async Task ExecuteProjects_ValidJsonFilePath_ExecutesProjects()
+    public void ExecuteProjects_ValidJsonFilePath_ExecutesProjects()
     {
         // Arrange
         var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
@@ -97,7 +97,7 @@ public class ResourceManagerTests
         var resourceManager = new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold);
 
         // Act
-        await resourceManager.ExecuteProjectsAsync();
+        resourceManager.ExecuteProjects();
 
         // Assert
         Assert.True(true);

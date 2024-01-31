@@ -12,15 +12,15 @@ public class ResourceManager : IDisposable
     private readonly int _memoryThresholdBytes;
     private readonly List<ProjectParameters> _projects;
     private readonly SemaphoreSlim _globalSemaphore;
-    private readonly PerformanceCounter _availableMemoryBytes = 
+    private readonly PerformanceCounter _availableMemoryBytes =
         new("Memory", "Available Bytes");
     private readonly Logger<ResourceManager> _log = new("log")
     {
-    #if DEBUG
+#if DEBUG
         IsEnabled = true
-    #else
+#else
         IsEnabled = false
-    #endif
+#endif
     };
 
     public ResourceManager(
@@ -34,72 +34,77 @@ public class ResourceManager : IDisposable
             $"max global threads '{maxGlobalThreads}' and memory threshold " +
             $"'{memoryThresholdBytes}'.");
 
-        _appPath =
-            string.IsNullOrWhiteSpace(appPath)
-                || !File.Exists(appPath)
-                || !Path.GetExtension(appPath).Equals(".exe", StringComparison.OrdinalIgnoreCase)
-            ? throw new ArgumentException(
-                $"'{nameof(appPath)}' is not a valid path to an existing file.",
-                nameof(appPath))
-            : appPath;
-
-        if (string.IsNullOrWhiteSpace(projectsParametersPath) 
-            || !File.Exists(projectsParametersPath))
-        {
-            throw new ArgumentException(
-                $"'{nameof(projectsParametersPath)}' is not a valid path to an existing file.",
-                nameof(projectsParametersPath));
-        }
-
         ArgumentOutOfRangeException.ThrowIfLessThan(maxGlobalThreads, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(memoryThresholdBytes, MIN_MEMORY_THRESHOLD_BYTES);
 
         _globalSemaphore = new SemaphoreSlim(maxGlobalThreads);
-
         _memoryThresholdBytes = memoryThresholdBytes;
-
-        var json = File.ReadAllText(projectsParametersPath);
-
-        _projects = ProjectsList.FromJson(json)?.Projects
-            ?? throw new Exception($"Failed to deserialize projects from " +
-                $"'{projectsParametersPath}' file.");
+        _appPath = ValidateAppPath(appPath);
+        _projects = ParseProjects(projectsParametersPath);
 
         _log.Log($"Resource manager initialized successfully. Number of " +
             $"projects loaded: {_projects.Count}.");
     }
 
-    public async Task ExecuteProjectsAsync()
+    public void EnableLogging()
+    {
+        _log.IsEnabled = true;
+    }
+
+    public void ExecuteProjects()
     {
         _log.Log($"Setting up projects.");
-        _log.Log($"'Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
 
+        List<Task> tasks = GetProjectsTaskList();
+
+        _log.Log($"Waiting for all projects to finish.");
+
+        Task.WaitAll([.. tasks]);
+    }
+
+    private List<Task> GetProjectsTaskList()
+    {
         var tasks = new List<Task>();
 
         foreach (var project in _projects)
         {
-            _log.Log($"[{project.Id}] - Starting project with memory count '{project.MemoryCount}', " +
-                $"app timeout '{project.AppTimeout}', try count '{project.TryCount}'  " +
-                $"and max threads '{project.MaxThreads}'.");
+            _log.Log($"[{project.Id}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"Memory count '{project.MemoryCount}', " +
+                $"app timeout '{project.AppTimeout}', try count '{project.TryCount}', " +
+                $"max threads '{project.MaxThreads}'.");
 
-            var task = Task.Run(async () =>
-            {
-                await ExecuteProjectAsync(project);
-            });
+            tasks.Add(Task.Run(() => ExecuteProject(project)));
 
-            tasks.Add(task);
-
-            _log.Log($"[{project.Id}] - Project set up.");
+            _log.Log($"[{project.Id}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"Project set up.");
         }
 
-        _log.Log($"Waiting for all projects to finish.");
-
-        await Task.WhenAll(tasks);
+        return tasks;
     }
 
-    private async Task ExecuteProjectAsync(ProjectParameters project)
+    private void ExecuteProject(ProjectParameters project)
     {
-        _log.Log($"[{project.Id}] - Executing project.");
+        _log.Log($"[{project.Id}]" +
+            $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+            $"Executing project.");
 
+        var tasks = GetProjectTriesTaskList(project);
+
+        _log.Log($"[{project.Id}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"Waiting for all tries to finish.");
+
+        Task.WaitAll([.. tasks]);
+
+        _log.Log($"[{project.Id}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"Project executed.");
+    }
+
+    private List<Task> GetProjectTriesTaskList(ProjectParameters project)
+    {
         var projectSemaphore = new SemaphoreSlim(project.MaxThreads ?? 1);
 
         var tasks = new List<Task>();
@@ -108,74 +113,140 @@ public class ResourceManager : IDisposable
         {
             var tryId = i + 1;
 
-            _log.Log($"[{project.Id}_{tryId}] instance initiated.");
-            
+            _log.Log($"[{project.Id}_{tryId}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"instance initiated.");
+
             tasks.Add(Task.Run(() => ExecuteApp(project, tryId, projectSemaphore)));
         }
 
-        _log.Log($"[{project.Id}] - Waiting for all tries to finish.");
-
-        await Task.WhenAll(tasks);
-
-        _log.Log($"[{project.Id}] - Project executed.");
+        return tasks;
     }
 
     private void ExecuteApp(ProjectParameters project, int instanceIndex, SemaphoreSlim projectSemaphore)
+    {
+        using Process process = CreateNewProcess(project, instanceIndex);
+
+        ReserveThread(projectSemaphore, $"{project.Id}_{instanceIndex}");
+
+        try
+        {
+            _log.Log($"[{project.Id}_{instanceIndex}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"Trying to execute app.");
+
+            WaitForEnoughMemory(project, instanceIndex);
+
+            process.Start();
+
+            _log.Log($"[{project.Id}_{instanceIndex}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"App execution started.");
+
+            process.WaitForExit();
+
+            _log.Log($"[{project.Id}_{instanceIndex}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"App execution finished. Exit code: {process.ExitCode}.");
+        }
+        catch (Exception ex)
+        {
+            _log.Log($"[{project.Id}_{instanceIndex}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"Failed to execute application. Exception: '{ex}'");
+        }
+        finally
+        {
+            ReleaseThread(projectSemaphore, $"{project.Id}_{instanceIndex}");
+        }
+    }
+
+    private void ReleaseThread(SemaphoreSlim projectSemaphore, string instanceId)
+    {
+        var projectCount = projectSemaphore.Release();
+        var globalCount = _globalSemaphore.Release();
+
+        _log.Log($"[{instanceId}]" +
+            $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+            $"Semaphores are released. Global semaphore count: {globalCount}, " +
+            $"project semaphore count: {projectCount}.");
+    }
+
+    private void ReserveThread(SemaphoreSlim projectSemaphore, string instanceId)
+    {
+        _globalSemaphore.Wait();
+        projectSemaphore.Wait();
+
+        _log.Log($"[{instanceId}]" +
+            $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+            $"Semaphores are acquired.");
+    }
+
+    private void WaitForEnoughMemory(ProjectParameters project, int instanceIndex)
+    {
+        _log.Log($"[{project.Id}_{instanceIndex}]" +
+            $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+            $"Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
+
+        var notEnoughMemory = _availableMemoryBytes.RawValue < _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
+
+        while (notEnoughMemory)
+        {
+            _log.Log($"[{project.Id}_{instanceIndex}]" +
+                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+                $"Not enough memory, waiting.");
+
+            Thread.Sleep(DELAY_BETWEEN_MEMORY_CHECKS);
+
+            notEnoughMemory = _availableMemoryBytes.RawValue < _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
+        }
+
+        _log.Log($"[{project.Id}_{instanceIndex}]" +
+            $"[Thread:{Environment.CurrentManagedThreadId}] - " +
+            $"There are enough memory.");
+    }
+
+    private Process CreateNewProcess(ProjectParameters project, int instanceIndex)
     {
         var processStartInfo = new ProcessStartInfo
         {
             FileName = _appPath,
             Arguments = $"--app-timeout {project.AppTimeout} --memory-count {project.MemoryCount} --instance-id {project.Id}_{instanceIndex} --log {_log.IsEnabled}",
             CreateNoWindow = true,
-            WorkingDirectory = "../../../../"
+            WorkingDirectory = "../../../../",
         };
 
-        using var process = new Process { StartInfo = processStartInfo };
+        var process = new Process { StartInfo = processStartInfo };
 
-        _globalSemaphore.Wait();
-        projectSemaphore.Wait();
+        return process;
+    }
 
-        _log.Log($"[{project.Id}_{instanceIndex}] - Semaphore acquired.");
-
-        try
+    private static List<ProjectParameters> ParseProjects(string projectsParametersPath)
+    {
+        if (string.IsNullOrWhiteSpace(projectsParametersPath)
+            || !File.Exists(projectsParametersPath))
         {
-            _log.Log($"[{project.Id}_{instanceIndex}] - Trying to execute app.");
-            
-            var memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
-
-            _log.Log($"[{project.Id}_{instanceIndex}] - Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
-
-            while (!memoryIsEnough)
-            {
-                _log.Log($"[{project.Id}_{instanceIndex}] - Memory is not enough, waiting.");
-
-                Thread.Sleep(DELAY_BETWEEN_MEMORY_CHECKS);
-
-                memoryIsEnough = _availableMemoryBytes.RawValue > _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
-            }
-
-            _log.Log($"[{project.Id}_{instanceIndex}] - Memory is enough, executing app.");
-
-            process.Start();
-
-            _log.Log($"[{project.Id}_{instanceIndex}] - App execution started.");
-
-            process.WaitForExit();
-
-            _log.Log($"[{project.Id}_{instanceIndex}] - App execution finished. Exit code: '{process.ExitCode}'.");
-        }
-        catch (Exception ex)
-        {
-            _log.Log($"[{project.Id}_{instanceIndex}] - Failed to execute project. Exception: '{ex}'");
-        }
-        finally
-        {
-            var projectCount = projectSemaphore.Release();
-            var globalCount = _globalSemaphore.Release();
-            
-            _log.Log($"[{project.Id}_{instanceIndex}] - Semaphore released. Global semaphore count: {globalCount}, project semaphore count: {projectCount}.");
+            throw new ArgumentException(
+                $"'{nameof(projectsParametersPath)}' is not a valid path to an existing file.",
+                nameof(projectsParametersPath));
         }
 
+        var json = File.ReadAllText(projectsParametersPath);
+
+        return ProjectsList.FromJson(json)?.Projects
+            ?? throw new Exception($"Failed to deserialize projects from " +
+                $"'{projectsParametersPath}' file.");
+    }
+
+    private static string ValidateAppPath(string appPath)
+    {
+        return string.IsNullOrWhiteSpace(appPath)
+                || !File.Exists(appPath)
+                || !Path.GetExtension(appPath).Equals(".exe", StringComparison.OrdinalIgnoreCase)
+            ? throw new ArgumentException(
+                $"'{nameof(appPath)}' is not a valid path to an existing file.",
+                nameof(appPath))
+            : appPath;
     }
 
     public void Dispose()
