@@ -7,4 +7,5 @@ public class BenchmarksSettings
     public int MaxGlobalThreads { get; set; }
     public int MemoryThresholdMb { get; set; }
     public bool EnableLogging { get; set; }
+    public float ProcessorTimeThreshold { get; set; }
 }

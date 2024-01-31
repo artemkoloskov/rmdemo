@@ -21,13 +21,16 @@ public class Benchmarks
             settings.ProjectsParametersPath
                 ?? throw new ArgumentNullException(nameof(settings.ProjectsParametersPath)),
             settings.MaxGlobalThreads,
-            settings.MemoryThresholdMb * 1024 * 1024
+            settings.MemoryThresholdMb * 1024 * 1024,
+            settings.ProcessorTimeThreshold
         );
 
         if (settings.EnableLogging)
         {
             _resourceManager.EnableLogging();
         }
+
+        _resourceManager.EnableReporting("Z:\\temp");
     }
 
     private static BenchmarksSettings LoadSettingsFromFile()

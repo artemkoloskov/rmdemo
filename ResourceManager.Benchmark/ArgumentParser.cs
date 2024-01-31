@@ -6,12 +6,14 @@ public static class ArgumentParser
     private const string PROJECTS_PARAMETERS_PATH_KEY = "--json-path";
     private const string MAX_GLOBAL_THREADS_KEY = "--max-global-threads";
     private const string MEMORY_THRESHOLD_MB_KEY = "--memory-threshold-mb";
+    private const string PROCESSOR_TIME_THRESHOLD_KEY = "--processor-time-threshold";
     private const string ENABLE_LOGGING_KEY = "--log";
 
     private const string DEFAULT_APP_PATH = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
     private const string DEFAULT_PROJECTS_PATH = "projects.json";
     private const int DEFAULT_MAX_GLOBAL_THREADS = 20;
-    private const int DEFAULT_MEMORY_THRESHOLD_MB = 2000;
+    private const int DEFAULT_MEMORY_THRESHOLD_MB = 200;
+    private const float DEFAULT_PROCESSOR_TIME_THRESHOLD = 5f;
     private const bool DEFAULT_ENABLE_LOGGING = false;
 
     public static void CheckArgs(string[] args)
@@ -49,6 +51,10 @@ public static class ArgumentParser
             $"logging or not. Be aware, that logging can significantly slow down " +
             $"the execution of the resource manager. Also, BenchmarkDotNet " +
             $"will delete the log file after the benchmark is finished");
+        Console.WriteLine($"    {PROCESSOR_TIME_THRESHOLD_KEY} <number> - optional, " +
+            $"default value - {DEFAULT_PROCESSOR_TIME_THRESHOLD}, a threshold " +
+            $"for the processor time, in percent, that should be free at all " +
+            $"times while resource manager is running");
         Console.WriteLine("===================================================");
         Console.WriteLine();
     }
@@ -174,5 +180,29 @@ public static class ArgumentParser
         Console.WriteLine($"'{value}' is not a valid value for " +
             $"'{ENABLE_LOGGING_KEY}', using default value - '{DEFAULT_ENABLE_LOGGING}'");
         return DEFAULT_ENABLE_LOGGING;
+    }
+
+    public static float ParseProcessorTimeThreshold(string[] args)
+    {
+        var keyIndex = Array.IndexOf(args, PROCESSOR_TIME_THRESHOLD_KEY);
+
+        if (keyIndex == -1)
+        {
+            Console.WriteLine($"'{PROCESSOR_TIME_THRESHOLD_KEY}' argument not found, using " +
+                $"default value - '{DEFAULT_PROCESSOR_TIME_THRESHOLD}'");
+            return DEFAULT_PROCESSOR_TIME_THRESHOLD;
+        }
+
+        var value = args[keyIndex + 1];
+
+        if (float.TryParse(value, out var result))
+        {
+            return result;
+        }
+
+        Console.WriteLine($"'{value}' is not a valid value for " +
+            $"'{PROCESSOR_TIME_THRESHOLD_KEY}', using default value - " +
+            $"'{DEFAULT_PROCESSOR_TIME_THRESHOLD}'");
+        return DEFAULT_PROCESSOR_TIME_THRESHOLD;
     }
 }
