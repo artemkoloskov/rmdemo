@@ -8,6 +8,7 @@ public static class ArgumentParser
     private const string MEMORY_THRESHOLD_MB_KEY = "--memory-threshold-mb";
     private const string PROCESSOR_TIME_THRESHOLD_KEY = "--processor-time-threshold";
     private const string ENABLE_LOGGING_KEY = "--log";
+    private const string REPORTS_PATH_KEY = "--reports-path";
 
     private const string DEFAULT_APP_PATH = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
     private const string DEFAULT_PROJECTS_PATH = "projects.json";
@@ -15,6 +16,7 @@ public static class ArgumentParser
     private const int DEFAULT_MEMORY_THRESHOLD_MB = 200;
     private const float DEFAULT_PROCESSOR_TIME_THRESHOLD = 5f;
     private const bool DEFAULT_ENABLE_LOGGING = false;
+    private const string DEFAULT_REPORTS_PATH = "C:\\temp";
 
     public static void CheckArgs(string[] args)
     {
@@ -55,6 +57,9 @@ public static class ArgumentParser
             $"default value - {DEFAULT_PROCESSOR_TIME_THRESHOLD}, a threshold " +
             $"for the processor time, in percent, that should be free at all " +
             $"times while resource manager is running");
+        Console.WriteLine($"    {REPORTS_PATH_KEY} <path>             - optional, " +
+            $"default value - '{DEFAULT_REPORTS_PATH}', path to the folder " +
+            $"where the reports will be saved");
         Console.WriteLine("===================================================");
         Console.WriteLine();
     }
@@ -204,5 +209,35 @@ public static class ArgumentParser
             $"'{PROCESSOR_TIME_THRESHOLD_KEY}', using default value - " +
             $"'{DEFAULT_PROCESSOR_TIME_THRESHOLD}'");
         return DEFAULT_PROCESSOR_TIME_THRESHOLD;
+    }
+
+    public static string ParseReportsPath(string[] args)
+    {
+        var keyIndex = Array.IndexOf(args, REPORTS_PATH_KEY);
+
+        if (keyIndex == -1)
+        {
+            var fullPath = Path.GetFullPath(DEFAULT_REPORTS_PATH);
+
+            if (!Directory.Exists(fullPath))
+            {
+                throw new DirectoryNotFoundException($"Default reports path {fullPath} not found");
+            }
+
+            Console.WriteLine($"'{REPORTS_PATH_KEY}' argument not found, using " +
+                $"default value - '{fullPath}'");
+
+            return fullPath;
+        }
+
+        var value = args[keyIndex + 1];
+
+        if (string.IsNullOrWhiteSpace(value)
+            || !Directory.Exists(value))
+        {
+            throw new ArgumentException($"'{value}' is not a valid path to an existing directory");
+        }
+
+        return value;
     }
 }

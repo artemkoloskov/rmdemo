@@ -30,7 +30,8 @@ public class Benchmarks
             _resourceManager.EnableLogging();
         }
 
-        _resourceManager.EnableReporting("Z:\\temp");
+        _resourceManager.EnableReporting(settings.ReportsPath
+            ?? throw new ArgumentNullException(nameof(settings.ReportsPath)));
     }
 
     private static BenchmarksSettings LoadSettingsFromFile()

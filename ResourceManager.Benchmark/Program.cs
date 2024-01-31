@@ -31,7 +31,8 @@ internal class Program
             MaxGlobalThreads = ArgumentParser.ParseMaxGlobalThreads(args),
             MemoryThresholdMb = ArgumentParser.ParseMemoryThresholdMb(args),
             EnableLogging = ArgumentParser.ParseEnableLogging(args),
-            ProcessorTimeThreshold = ArgumentParser.ParseProcessorTimeThreshold(args)
+            ProcessorTimeThreshold = ArgumentParser.ParseProcessorTimeThreshold(args),
+            ReportsPath = ArgumentParser.ParseReportsPath(args),
         };
 
         var json = JsonConvert.SerializeObject(settings, Formatting.Indented);

@@ -8,4 +8,5 @@ public class BenchmarksSettings
     public int MemoryThresholdMb { get; set; }
     public bool EnableLogging { get; set; }
     public float ProcessorTimeThreshold { get; set; }
+    public string? ReportsPath { get; set; }
 }
