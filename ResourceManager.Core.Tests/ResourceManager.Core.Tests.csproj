@@ -27,6 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
+		<None Update="easyprojects.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 		<None Update="projects.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

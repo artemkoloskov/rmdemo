@@ -35,7 +35,7 @@ public class ResourceManager : IDisposable
             $"'{processorTimeThreshold}'");
 
         ArgumentOutOfRangeException.ThrowIfLessThan(maxGlobalThreads, 1);
-        
+
         ResourceMonitor.Configure(memoryThresholdBytes, processorTimeThreshold);
 
         _globalSemaphore = new SemaphoreSlim(maxGlobalThreads);
@@ -53,7 +53,7 @@ public class ResourceManager : IDisposable
 
     public void EnableReporting(string reportPath)
     {
-        if (string.IsNullOrWhiteSpace(reportPath) 
+        if (string.IsNullOrWhiteSpace(reportPath)
             || !Directory.Exists(Path.GetDirectoryName(reportPath)))
         {
             throw new ArgumentException(
@@ -90,11 +90,26 @@ public class ResourceManager : IDisposable
 
         var totalExecutions = _projects.Sum(p => p.TryCount);
         var totalProjectedTime = _projects.Sum(p => p.TryCount * p.AppTimeout) / 1000;
+        var totalActualTime = ResourceMonitor.TotalProcessingTime() / 1000;
+        var totalCpuUsage = ResourceMonitor.AverageProcessorTimeInUse();
+        var totalMemoryUsage = (int)ResourceMonitor.AverageMemoryInUseMb();
 
-        report.AppendLine("Project number,Total executions,Projected sequential execution time (s),Actual execution time (s),Average CPU usage (%),Average memory in use (MB)");
-        report.AppendLine($"{_projects.Count},{totalExecutions},{totalProjectedTime},{ResourceMonitor.TotalProcessingTime() / 1000},{ResourceMonitor.AverageProcessorTimeInUse()},{ResourceMonitor.AverageMemoryInUseMb() / 1024 / 1024}");
+        _log.Log($"Saving report to '{_reportPath}'. Total executions: " +
+            $"{totalExecutions}, total projected time: {totalProjectedTime}, " +
+            $"total actual time: {totalActualTime}, total CPU usage: " +
+            $"{totalCpuUsage}, total memory usage: {totalMemoryUsage}");
 
-        var reportPath = Path.Combine(_reportPath, $"report_{DateTime.Now:u}.txt");
+        report.AppendLine($"Projects number,{_projects.Count}");
+        report.AppendLine($"Total executions,{totalExecutions}");
+        report.AppendLine($"Projected sequential execution time (s),{totalProjectedTime}");
+        report.AppendLine($"Actual execution time (s),{totalActualTime}");
+        report.AppendLine($"Average CPU usage (%),{totalCpuUsage}");
+        report.AppendLine($"Average memory in use (MB),{totalMemoryUsage}");
+        report.AppendLine();
+
+        var reportPath = Path.Combine(_reportPath, $"report_{DateTime.Now:yyyy_MM_dd-hh_mm_ss}.csv");
+
+        File.Create(reportPath).Dispose();
 
         File.WriteAllText(reportPath, report.ToString());
     }

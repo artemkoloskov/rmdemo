@@ -8,7 +8,7 @@ namespace ResourceManager.Core;
 public class ResourceMonitor
 {
     private const int DELAY_BETWEEN_CHECKS = 50;
-    private const float MIN_PROCESSOR_TIME_THRESHOLD = 30f;
+    private const float MIN_PROCESSOR_TIME_THRESHOLD = 5f;
     private const int MIN_MEMORY_THRESHOLD_BYTES = 1024 * 1024 * 200;
     private static readonly PerformanceCounter _availableMemoryBytes =
         new("Memory", "Available Bytes");
@@ -73,7 +73,7 @@ public class ResourceMonitor
         return EnoughProcessorTime() && EnoughMemory(memoryToAllocateMb);
     }
 
-    public static float AverageProcessorTimeInUse()
+    public static int AverageProcessorTimeInUse()
     {
         if (_processorTimeCallsCount == 0)
         {
@@ -86,7 +86,7 @@ public class ResourceMonitor
 
         _log.Log($"Average processor time in use: {result}%.");
 
-        return result;
+        return (int)result;
     }
 
     public static long AverageMemoryInUseMb()
@@ -99,7 +99,12 @@ public class ResourceMonitor
         }
 
         var averageFreeMemory = _memorySumMb / _memoryCallsCount;
-        var result = GetTotalMemory() - averageFreeMemory;
+
+        var totalMemory = GetTotalMemory();
+
+        _log.Log($"Total memory: {totalMemory} MB.");
+
+        var result = totalMemory - averageFreeMemory;
 
         _log.Log($"Average memory in use: {result} MB.");
 

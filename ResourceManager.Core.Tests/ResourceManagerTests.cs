@@ -146,7 +146,75 @@ public class ResourceManagerTests
     {
         // Arrange
         var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
+        var jsonFilePath = "projects.json";
+        var maxGlobalThreads = 15;
+        var memoryThreshold = 1024 * 1024 * 1001;
+        var processorTimeThreshold = 31f;
+        var resourceManager = new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold);
+        resourceManager.EnableReporting("Z:\\temp");
+
+        // Act
+        resourceManager.ExecuteProjects();
+
+        // Assert
+        Assert.True(true);
+    }
+
+    [Fact]
+    public void ExecuteProjects_HeavyLoadValidJsonFilePath_ExecutesProjects()
+    {
+        // Arrange
+        var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
         var jsonFilePath = "testdataset.json";
+        var maxGlobalThreads = 20;
+        var memoryThreshold = 1024 * 1024 * 201;
+        var processorTimeThreshold = 6f;
+        var resourceManager = new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold);
+        resourceManager.EnableReporting("Z:\\temp");
+
+        // Act
+        resourceManager.ExecuteProjects();
+
+        // Assert
+        Assert.True(true);
+    }
+
+    [Fact]
+    public void EnableReporting_ValidJsonFilePathAndInvalidReportPath_ThrowsArgumentException()
+    {
+        // Arrange
+        var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
+        var jsonFilePath = "projects.json";
+        var maxGlobalThreads = 15;
+        var memoryThreshold = 1024 * 1024 * 1001;
+        var processorTimeThreshold = 31f;
+        var resourceManager = new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold);
+
+        // Act & Assert
+        Assert.ThrowsAny<ArgumentException>(() => resourceManager.EnableReporting(""));
+    }
+
+    [Fact]
+    public void EnableReporting_ValidJsonFilePathAndValidReportPath_DoesNotThrow()
+    {
+        // Arrange
+        var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
+        var jsonFilePath = "easyprojects.json";
         var maxGlobalThreads = 15;
         var memoryThreshold = 1024 * 1024 * 1001;
         var processorTimeThreshold = 31f;
@@ -158,9 +226,10 @@ public class ResourceManagerTests
             processorTimeThreshold);
 
         // Act
-        resourceManager.ExecuteProjects();
+        var exception = Record.Exception(() => resourceManager.EnableReporting("Z:\\temp"));
 
         // Assert
-        Assert.True(true);
+        Assert.Null(exception);
+        resourceManager.ExecuteProjects();
     }
 }
