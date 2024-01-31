@@ -67,6 +67,22 @@ public class ResourceMonitorTests
         // Assert
         Assert.True(averageProcessorTimeInUse > 0);
     }
+
+    [Fact]
+    public void AverageMemoryInUseMb_LoadOnSystem_ReturnsValue()
+    {
+        // Arrange
+        _ = ResourceMonitor.TotalProcessingTime();
+        Task.Run(() => PutLoadOnMemory());
+        Thread.Sleep(1000);
+        _ = ResourceMonitor.EnoughResources(2000);
+
+        // Act
+        var averageMemoryInUseMb = ResourceMonitor.AverageMemoryInUseMb();
+
+        // Assert
+        Assert.True(averageMemoryInUseMb > 0);
+    }
     
     [Fact]
     public void TotalProcessingTime_LoadOnSystem_ReturnsValue()

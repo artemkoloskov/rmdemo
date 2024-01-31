@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 namespace ResourceManager.Core;
@@ -28,6 +29,8 @@ public class ResourceMonitor
     private static float _processorTimeThreshold = MIN_PROCESSOR_TIME_THRESHOLD;
     private static int _processorTimeCallsCount = 0;
     private static float _processorTimeSum = 0;
+    private static int _memoryCallsCount = 0;
+    private static long _memorySumMb = 0;
 
 
     static ResourceMonitor()
@@ -86,6 +89,23 @@ public class ResourceMonitor
         return result;
     }
 
+    public static long AverageMemoryInUseMb()
+    {
+        if (_memoryCallsCount == 0)
+        {
+            _log.Log("_memoryCallsCount is 0.");
+
+            return 0;
+        }
+
+        var averageFreeMemory = _memorySumMb / _memoryCallsCount;
+        var result = GetTotalMemory() - averageFreeMemory;
+
+        _log.Log($"Average memory in use: {result} MB.");
+
+        return result;
+    }
+
     public static long TotalProcessingTime()
     {
         var result = _stopwatch.ElapsedMilliseconds;
@@ -111,7 +131,7 @@ public class ResourceMonitor
 
     private static bool EnoughMemory(int memoryToAllocateMb)
     {
-        var availableMemoryMb = _availableMemoryBytes.RawValue / 1024 / 1024;
+        var availableMemoryMb = GetAvailableMemoryMb();
         var memoryThresholdMb = _memoryThresholdBytes / 1024 / 1024;
 
         _log.Log($"Available memory: {availableMemoryMb} MB. " +
@@ -121,13 +141,32 @@ public class ResourceMonitor
         return availableMemoryMb > memoryThresholdMb + memoryToAllocateMb;
     }
 
+    private static long GetAvailableMemoryMb()
+    {
+        var memory = _availableMemoryBytes.RawValue / 1024 / 1024;
+        _memoryCallsCount++;
+        _memorySumMb += memory;
+
+        return memory;
+    }
+
     private static float GetProcessorTime()
     {
         float processorTime = _processorTime.NextValue();
         _processorTimeCallsCount++;
-
         _processorTimeSum += processorTime;
 
         return processorTime;
     }
+
+    private static long GetTotalMemory()
+    {
+        GetPhysicallyInstalledSystemMemory(out long memoryKb);
+
+        return memoryKb / 1024;
+    }
+
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetPhysicallyInstalledSystemMemory(out long TotalMemoryInKilobytes);
 }
