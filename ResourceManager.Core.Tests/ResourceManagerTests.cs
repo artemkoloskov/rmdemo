@@ -13,9 +13,15 @@ public class ResourceManagerTests
         var jsonFilePath = "projects.json";
         var maxGlobalThreads = 10;
         var memoryThreshold = 1024 * 1024 * 1024; // 1 GB
+        var processorTimeThreshold = 31f;
 
         // Act & Assert
-        Assert.ThrowsAny<ArgumentException>(() => new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold));
+        Assert.ThrowsAny<ArgumentException>(() => new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold));
     }
 
     [Fact]
@@ -26,9 +32,15 @@ public class ResourceManagerTests
         var jsonFilePath = "projects.json";
         var maxGlobalThreads = 10;
         var memoryThreshold = 1024 * 1024 * 1024; // 1 GB
+        var processorTimeThreshold = 31f;
 
         // Act & Assert
-        Assert.ThrowsAny<ArgumentException>(() => new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold));
+        Assert.ThrowsAny<ArgumentException>(() => new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold));
     }
 
     [Fact]
@@ -39,9 +51,15 @@ public class ResourceManagerTests
         string? jsonFilePath = "";
         var maxGlobalThreads = 10;
         var memoryThreshold = 1024 * 1024 * 1024; // 1 GB
+        var processorTimeThreshold = 31f;
 
         // Act & Assert
-        Assert.ThrowsAny<ArgumentException>(() => new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold));
+        Assert.ThrowsAny<ArgumentException>(() => new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold));
     }
 
     [Fact]
@@ -52,9 +70,15 @@ public class ResourceManagerTests
         var jsonFilePath = "projects.json";
         var maxGlobalThreads = 0;
         var memoryThreshold = 1024 * 1024 * 1024; // 1 GB
+        var processorTimeThreshold = 31f;
 
         // Act & Assert
-        Assert.ThrowsAny<ArgumentOutOfRangeException>(() => new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold));
+        Assert.ThrowsAny<ArgumentOutOfRangeException>(() => new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold));
     }
 
     [Fact]
@@ -65,9 +89,34 @@ public class ResourceManagerTests
         var jsonFilePath = "projects.json";
         var maxGlobalThreads = 10;
         var memoryThreshold = 0;
+        var processorTimeThreshold = 31f;
 
         // Act & Assert
-        Assert.ThrowsAny<ArgumentOutOfRangeException>(() => new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold));
+        Assert.ThrowsAny<ArgumentOutOfRangeException>(() => new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold));
+    }
+
+    [Fact]
+    public void Constructor_ProcessorTimeThresholdIsLessThanMinimumRequired_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
+        var jsonFilePath = "projects.json";
+        var maxGlobalThreads = 10;
+        var memoryThreshold = 1024 * 1024 * 1024; // 1 GB
+        var processorTimeThreshold = 0f;
+
+        // Act & Assert
+        Assert.ThrowsAny<ArgumentOutOfRangeException>(() => new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold));
     }
 
     [Fact]
@@ -78,9 +127,15 @@ public class ResourceManagerTests
         var jsonFilePath = "projects.json";
         var maxGlobalThreads = 10;
         var memoryThreshold = 1024 * 1024 * 1024; // 1 GB
+        var processorTimeThreshold = 31f;
 
         // Act
-        var exception = Record.Exception(() => new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold));
+        var exception = Record.Exception(() => new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold));
 
         // Assert
         Assert.Null(exception);
@@ -91,10 +146,16 @@ public class ResourceManagerTests
     {
         // Arrange
         var appPath = "../../../../ConsoleApp/bin/Release/net8.0/ConsoleApp.exe";
-        var jsonFilePath = "projects.json";
+        var jsonFilePath = "testdataset.json";
         var maxGlobalThreads = 15;
-        var memoryThreshold = 1024 * 1024 * 1001; 
-        var resourceManager = new ResourceManager(appPath, jsonFilePath, maxGlobalThreads, memoryThreshold);
+        var memoryThreshold = 1024 * 1024 * 1001;
+        var processorTimeThreshold = 31f;
+        var resourceManager = new ResourceManager(
+            appPath,
+            jsonFilePath,
+            maxGlobalThreads, 
+            memoryThreshold,
+            processorTimeThreshold);
 
         // Act
         resourceManager.ExecuteProjects();

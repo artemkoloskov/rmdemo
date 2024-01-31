@@ -6,14 +6,9 @@ namespace ResourceManager.Core;
 [SupportedOSPlatform("windows")]
 public class ResourceManager : IDisposable
 {
-    private const int MIN_MEMORY_THRESHOLD_BYTES = 1024 * 1024 * 200; // 200 MB
-    private const int DELAY_BETWEEN_MEMORY_CHECKS = 50;
     private readonly string _appPath;
-    private readonly int _memoryThresholdBytes;
     private readonly List<ProjectParameters> _projects;
     private readonly SemaphoreSlim _globalSemaphore;
-    private readonly PerformanceCounter _availableMemoryBytes =
-        new("Memory", "Available Bytes");
     private readonly Logger<ResourceManager> _log = new("log")
     {
 #if DEBUG
@@ -27,18 +22,20 @@ public class ResourceManager : IDisposable
         string appPath,
         string projectsParametersPath,
         int maxGlobalThreads,
-        int memoryThresholdBytes)
+        int memoryThresholdBytes,
+        float processorTimeThreshold)
     {
         _log.Log($"Initializing resource manager with app path '{appPath}', " +
             $"projects parameters path '{projectsParametersPath}', " +
-            $"max global threads '{maxGlobalThreads}' and memory threshold " +
-            $"'{memoryThresholdBytes}'.");
+            $"max global threads '{maxGlobalThreads}', memory threshold " +
+            $"'{memoryThresholdBytes}' and processor time threshold " +
+            $"'{processorTimeThreshold}'");
 
         ArgumentOutOfRangeException.ThrowIfLessThan(maxGlobalThreads, 1);
-        ArgumentOutOfRangeException.ThrowIfLessThan(memoryThresholdBytes, MIN_MEMORY_THRESHOLD_BYTES);
+        
+        ResourceMonitor.Configure(memoryThresholdBytes, processorTimeThreshold);
 
         _globalSemaphore = new SemaphoreSlim(maxGlobalThreads);
-        _memoryThresholdBytes = memoryThresholdBytes;
         _appPath = ValidateAppPath(appPath);
         _projects = ProjectsList.ParseProjects(projectsParametersPath);
 
@@ -135,7 +132,7 @@ public class ResourceManager : IDisposable
                 $"[Thread:{Environment.CurrentManagedThreadId}] - " +
                 $"Trying to execute app.");
 
-            WaitForEnoughMemory(project, instanceIndex);
+            ResourceMonitor.WaitForEnoughResources(project.MemoryCount ?? 0);
 
             process.Start();
 
@@ -180,30 +177,6 @@ public class ResourceManager : IDisposable
         _log.Log($"[{instanceId}]" +
             $"[Thread:{Environment.CurrentManagedThreadId}] - " +
             $"Semaphores are acquired.");
-    }
-
-    private void WaitForEnoughMemory(ProjectParameters project, int instanceIndex)
-    {
-        _log.Log($"[{project.Id}_{instanceIndex}]" +
-            $"[Thread:{Environment.CurrentManagedThreadId}] - " +
-            $"Memory left: {_availableMemoryBytes.RawValue / 1024 / 1024} MB");
-
-        var notEnoughMemory = _availableMemoryBytes.RawValue < _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
-
-        while (notEnoughMemory)
-        {
-            _log.Log($"[{project.Id}_{instanceIndex}]" +
-                $"[Thread:{Environment.CurrentManagedThreadId}] - " +
-                $"Not enough memory, waiting.");
-
-            Thread.Sleep(DELAY_BETWEEN_MEMORY_CHECKS);
-
-            notEnoughMemory = _availableMemoryBytes.RawValue < _memoryThresholdBytes + project.MemoryCount * 1024 * 1024;
-        }
-
-        _log.Log($"[{project.Id}_{instanceIndex}]" +
-            $"[Thread:{Environment.CurrentManagedThreadId}] - " +
-            $"There are enough memory.");
     }
 
     private Process CreateNewProcess(ProjectParameters project, int instanceIndex)
