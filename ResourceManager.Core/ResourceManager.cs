@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.Versioning;
 
 namespace ResourceManager.Core;
@@ -40,7 +40,7 @@ public class ResourceManager : IDisposable
         _globalSemaphore = new SemaphoreSlim(maxGlobalThreads);
         _memoryThresholdBytes = memoryThresholdBytes;
         _appPath = ValidateAppPath(appPath);
-        _projects = ParseProjects(projectsParametersPath);
+        _projects = ProjectsList.ParseProjects(projectsParametersPath);
 
         _log.Log($"Resource manager initialized successfully. Number of " +
             $"projects loaded: {_projects.Count}.");
@@ -219,23 +219,6 @@ public class ResourceManager : IDisposable
         var process = new Process { StartInfo = processStartInfo };
 
         return process;
-    }
-
-    private static List<ProjectParameters> ParseProjects(string projectsParametersPath)
-    {
-        if (string.IsNullOrWhiteSpace(projectsParametersPath)
-            || !File.Exists(projectsParametersPath))
-        {
-            throw new ArgumentException(
-                $"'{nameof(projectsParametersPath)}' is not a valid path to an existing file.",
-                nameof(projectsParametersPath));
-        }
-
-        var json = File.ReadAllText(projectsParametersPath);
-
-        return ProjectsList.FromJson(json)?.Projects
-            ?? throw new Exception($"Failed to deserialize projects from " +
-                $"'{projectsParametersPath}' file.");
     }
 
     private static string ValidateAppPath(string appPath)

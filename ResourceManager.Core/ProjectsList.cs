@@ -22,6 +22,23 @@ public class ProjectsList
 
         return result;
     }
+    
+    public static List<ProjectParameters> ParseProjects(string projectsParametersPath)
+    {
+        if (string.IsNullOrWhiteSpace(projectsParametersPath)
+            || !File.Exists(projectsParametersPath))
+        {
+            throw new ArgumentException(
+                $"'{nameof(projectsParametersPath)}' is not a valid path to an existing file.",
+                nameof(projectsParametersPath));
+        }
+
+        var json = File.ReadAllText(projectsParametersPath);
+
+        return FromJson(json)?.Projects
+            ?? throw new Exception($"Failed to deserialize projects from " +
+                $"'{projectsParametersPath}' file.");
+    }
 }
 
 /// <summary>
