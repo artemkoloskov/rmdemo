@@ -4,6 +4,9 @@ using System.Runtime.Versioning;
 
 namespace ResourceManager.Core;
 
+/// <summary>
+/// Monitors the resources of the system.
+/// </summary>
 [SupportedOSPlatform("windows")]
 public class ResourceMonitor
 {
@@ -31,7 +34,14 @@ public class ResourceMonitor
     private int _memoryCallsCount = 0;
     private long _memorySumMb = 0;
 
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResourceMonitor"/> class.
+    /// Paramterers are validated and the monitor is started.
+    /// </summary>
+    /// <param name="memoryThresholdBytes">Minimum amount of memory that should
+    /// be free at all times.</param>
+    /// <param name="processorTimeThreshold">Minimum amount of processor time
+    /// that should be free at all times.</param>
     public ResourceMonitor(int memoryThresholdBytes, float processorTimeThreshold)
     {
         _stopwatch.Start();
@@ -50,6 +60,10 @@ public class ResourceMonitor
         _log.Log("ResourceMonitor initialized.");
     }
 
+    /// <summary>
+    /// Blocks the thread until enough resources are available.
+    /// </summary>
+    /// <param name="memoryToAllocateMb"></param>
     public void WaitForEnoughResources(int memoryToAllocateMb)
     {
         _log.Log($"Waiting for enough resources to allocate " +
@@ -64,11 +78,24 @@ public class ResourceMonitor
             $"{memoryToAllocateMb} MB.");
     }
 
+    /// <summary>
+    /// Checks if enough resources are available. Enough memory is available if 
+    /// the amount of free memory is greater than the memory threshold plus 
+    /// the amount of memory to allocate.
+    /// </summary>
+    /// <param name="memoryToAllocateMb">Specifies the amount of memory to
+    /// allocate.
+    /// <returns></returns>
     public bool EnoughResources(int memoryToAllocateMb)
     {
         return EnoughProcessorTime() && EnoughMemory(memoryToAllocateMb);
     }
 
+    /// <summary>
+    /// Returns the average processor time in use. The average is calculated
+    /// from the last call of this method.
+    /// </summary>
+    /// <returns></returns>
     public int AverageProcessorTimeInUse()
     {
         if (_processorTimeCallsCount == 0)
@@ -82,9 +109,17 @@ public class ResourceMonitor
 
         _log.Log($"Average processor time in use: {result}%.");
 
+        _processorTimeCallsCount = 0;
+        _processorTimeSum = 0;
+
         return (int)result;
     }
 
+    /// <summary>
+    /// Returns the average memory in use. The average is calculated from the
+    /// last call of this method.
+    /// </summary>
+    /// <returns></returns>
     public long AverageMemoryInUseMb()
     {
         if (_memoryCallsCount == 0)
@@ -104,19 +139,23 @@ public class ResourceMonitor
 
         _log.Log($"Average memory in use: {result} MB.");
 
+        _memoryCallsCount = 0;
+        _memorySumMb = 0;
+
         return result;
     }
 
-    public void RestartStopwatch()
-    {
-        _stopwatch.Restart();
-    }
-
+    /// <summary>
+    /// Returns the total processing time since the last call of this method.
+    /// </summary>
+    /// <returns></returns>
     public long TotalProcessingTime()
     {
         var result = _stopwatch.ElapsedMilliseconds;
 
         _log.Log($"Total processing time: {result} ms.");
+
+        _stopwatch.Restart();
 
         return result;
     }

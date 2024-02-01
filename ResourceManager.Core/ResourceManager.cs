@@ -4,6 +4,17 @@ using System.Text;
 
 namespace ResourceManager.Core;
 
+/// <summary>
+/// Manages the execution of multiple projects with multiple tries each.
+/// Uses a semaphore to limit the number of global threads and a semaphore
+/// for each project to limit the number of threads per project.
+/// <see cref="ResourceMonitor"/> is used to monitor the resources, to
+/// ensure that the system stays responsive.
+/// <see cref="Logger{T}"/> is used for logging. In release mode, logging
+/// is disabled by default.
+/// After all projects are executed, a report is saved to a file, if
+/// reporting is enabled.
+/// </summary>
 [SupportedOSPlatform("windows")]
 public class ResourceManager : IDisposable
 {
@@ -22,6 +33,22 @@ public class ResourceManager : IDisposable
 
     private string _reportPath = "";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ResourceManager"/> class.
+    /// All parameters are validated and the projects are loaded from the
+    /// specified file.
+    /// </summary>
+    /// <param name="appPath">Path to the application that will be executed
+    /// by the resource manager.</param>
+    /// <param name="projectsParametersPath">Path to the file containing
+    /// the projects' parameters.</param>
+    /// <param name="maxGlobalThreads">Maximum number of threads that can
+    /// be used by the resource manager.</param>
+    /// <param name="memoryThresholdBytes">An amount of memory that should
+    /// be free at all times while resource manager is running, in bytes.</param>
+    /// <param name="processorTimeThreshold">A threshold for the processor
+    /// time, in percent, that should be free at all times while resource
+    /// manager is running.</param>
     public ResourceManager(
         string appPath,
         string projectsParametersPath,
@@ -46,11 +73,23 @@ public class ResourceManager : IDisposable
             $"projects loaded: {_projects.Count}.");
     }
 
+    /// <summary>
+    /// Enables logging. Logging will significantly slow down the execution
+    /// of the resource manager.
+    /// </summary>
     public void EnableLogging()
     {
         _log.IsEnabled = true;
     }
 
+    /// <summary>
+    /// Enables reporting. The report will be saved to the specified path
+    /// after all projects are executed. Reports are saved in CSV format  with
+    /// a name in the format 'report_yyyy_MM_dd-hh_mm_ss.csv'.
+    /// </summary>
+    /// <param name="reportPath">Path to the directory where the report
+    /// will be saved.</param>
+    /// <exception cref="ArgumentException"></exception>
     public void EnableReporting(string reportPath)
     {
         if (string.IsNullOrWhiteSpace(reportPath)
@@ -64,10 +103,15 @@ public class ResourceManager : IDisposable
         _reportPath = reportPath;
     }
 
+    /// <summary>
+    /// Executes all projects loaded from the file. The projects are executed
+    /// in parallel, with a semaphore to limit the number of global threads
+    /// and a semaphore for each project to limit the number of threads per
+    /// project. After all projects are executed, a report is saved to a file,
+    /// if reporting is enabled.
+    /// </summary>
     public void ExecuteProjects()
     {
-        _resourceMonitor.RestartStopwatch();
-
         _log.Log($"Setting up projects.");
 
         List<Task> tasks = GetProjectsTaskList();

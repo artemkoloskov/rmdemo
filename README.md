@@ -51,7 +51,7 @@ four projects:
 
 ## Building
 
-The solution can be built using **Visual Studio 2019** or **Visual Studio Code**,
+The solution can be built using **Visual Studio 2022** or **Visual Studio Code**,
 or using the **dotnet** CLI (recommended):
 
 ```console
